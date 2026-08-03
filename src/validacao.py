@@ -37,7 +37,7 @@ def validar_campos_obrigatorios_rn02(df,logger) -> None:
         primeiro_erro = coordenadas[0]
         linha_erro, coluna_erro = primeiro_erro
 
-        mensagem = f"Falha na RN02: Valor ausente ou nulo encontrado na linha {linha_erro}, coluna '{coluna_erro}."
+        mensagem = f"Falha na RN02: Valor ausente ou nulo encontrado na linha { 4 + linha_erro}, coluna '{coluna_erro}."
         logging.error(mensagem)
         raise ValueError(mensagem)
 
@@ -78,13 +78,15 @@ def normalizar_status_rn05(status: str) -> str:
     # Retorna o valor mapeado; se não existir no dicionário, retorna o próprio status
     return mapeamento.get(status, status)
 
-def verificar_observacao_reprovado_rn07(status: str, observacao: str, logging):
+
+
+def verificar_observacao_reprovado_rn07(status: str, observacao: str,logger):
     # Vamos padronizar o texto para evitar erros de CamelSensitive
-    status_normalizado = str(status).strip().upper if status else ""
+    status_normalizado = str(status).strip().upper() if status else ""
 
     if status_normalizado == 'REPROVADO':
         if not observacao or str(observacao).strip() == "" or str(observacao).lower() == 'nan':
             msg = "Divergência: Falta de Justificativa no campo de observação em lote em REPROVADO"
-            logging.error(msg)
+            logger.error(msg)
             raise ValueError(msg)
     return True

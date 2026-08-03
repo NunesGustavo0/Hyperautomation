@@ -6,7 +6,7 @@ from pathlib import Path
 from .regras_negocio import aplicar_validacoes_por_linha
 from .relatorio import CAMINHO_SAIDA, gerar_relatorio_divergencias
 from .util import abrir_arquivo, obter_base_referencia
-from .validacao import validar_campos_obrigatorios_rn02, validar_estrutura_rn01
+from .validacao import validar_campos_obrigatorios_rn02, verificar_estrutura_rn01
 
 
 CAMINHO_LOG = Path(__file__).resolve().parents[1] / "log" / "execucao.log"
@@ -24,7 +24,7 @@ def main() -> None:
         df = abrir_arquivo(logger)
         base_referencia = obter_base_referencia(logger)
         divergencias: list = []
-        validar_estrutura_rn01(list(df.columns), logger)
+        verificar_estrutura_rn01(list(df.columns), logger)
         validar_campos_obrigatorios_rn02(df, logger)
         aplicar_validacoes_por_linha(df, base_referencia, logger, divergencias)
         if divergencias:
