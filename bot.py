@@ -12,6 +12,7 @@ from botcity.maestro.model import AutomationTaskFinishStatus, Column
 from src.config import ROOT_DIR, obter_configuracao
 from src.maestro_client import criar_cliente
 from src.vault_client import obter_credencial_erp
+from src.auditoria_planilha import main as executar_local
 
 
 CAMINHO_LOG = ROOT_DIR / "logs" / "botcity_performer.log"
@@ -229,7 +230,19 @@ def executar_performer() -> dict:
 
 
 def main() -> None:
-    executar_performer()
+    # Carregando a nossa configuração
+    config = obter_configuracao()
+
+    if config.maestro_enabled:
+        print("Iniciando o maestro atráves pelo Bot City")
+        executar_performer()
+        return
+    print("Executando o modo offline")
+    executar_local()
+
+
+
+
 
 
 if __name__ == "__main__":
