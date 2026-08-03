@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from botcity.maestro import BotMaestroSDK
 
-from config import Configuracao
+from .config import Configuracao
 
 
 @dataclass(frozen=True)

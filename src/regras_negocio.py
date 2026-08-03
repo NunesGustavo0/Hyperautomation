@@ -2,25 +2,11 @@ import logging
 
 import pandas as pd
 
-from validacao import (
-    verificar_lote,
-    verificar_observacao_reprovado,
+from .validacao import (
+    verificar_observacao_reprovado_rn07,
     verificar_status_rn04,
 )
-
-def aplicar_validacao_status(df: pd.DataFrame, logger):
-    """
-    Aplica a regra de validação e normalização à coluna 'status'.
-    Itera sobre a série e atualiza os valores in-place no DataFrame.
-    """
-    for index, valor in df['status'].items():
-        try:
-            # O método at[] atualiza o valor na célula específica com o retorno normalizado
-            df.at[index, 'status'] = verificar_status_rn04(valor, logger)
-        except ValueError as erro_status:
-            msg = f"Falha na validação na linha {index}: {erro_status}"
-            logger.error(msg)
-            raise ValueError(msg)
+from .base_referencia import verificar_lotes_rn03
 
 def aplicar_validacoes_por_linha(df: pd.DataFrame, base_referencia: list, logger: logging.Logger, divergencias: list):
     """
@@ -33,7 +19,7 @@ def aplicar_validacoes_por_linha(df: pd.DataFrame, base_referencia: list, logger
 
         # RN03: Validação de Existência na Base
         try:
-            verificar_lote(lote_id, base_referencia)
+            verificar_lotes_rn03(lote_id, base_referencia)
         except ValueError as erro_rn03:
             logger.warning(f"Linha {index} - Lote {lote_id}: Falha RN03")
             divergencias.append({
@@ -59,7 +45,7 @@ def aplicar_validacoes_por_linha(df: pd.DataFrame, base_referencia: list, logger
 
         # RN07: Validação de Observação para Reprovados
         try:
-            verificar_observacao_reprovado(status, observacao)
+            verificar_observacao_reprovado_rn07(status, observacao,logger)
         except ValueError as erro_rn07:
             logger.warning(f"Linha {index} - Lote {lote_id}: Falha RN07")
             divergencias.append({

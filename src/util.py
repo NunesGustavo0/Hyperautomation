@@ -1,11 +1,11 @@
 from pathlib import Path
 import pandas as pd
 
-CAMINHO_ARQUIVO = Path(__file__).resolve().parents[1] / "data" / "inspecao_lotes_dia.xlsx"
+CAMINHO_ARQUIVO = Path(__file__).resolve().parents[1] / "data" / 'samples' / "inspecao_lotes_dia_teste.xlsx"
 
 def abrir_arquivo(logger):
     cabecalho = 2
-    df = pd.read_excel(io=CAMINHO_ARQUIVO, header=cabecalho, sheet_name="Inspecao_14_06_2026")
+    df = pd.read_excel(io=CAMINHO_ARQUIVO, header=cabecalho, sheet_name="Inspecao")
     df = df.dropna(how='all')
     df = df.reset_index(drop=True)
 
