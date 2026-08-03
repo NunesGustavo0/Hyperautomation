@@ -2,7 +2,7 @@ import logging
 
 import pandas as pd
 
-from validacao import (
+from .validacao import (
     verificar_lote,
     verificar_observacao_reprovado,
     verificar_status_rn04,
