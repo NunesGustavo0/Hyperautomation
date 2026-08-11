@@ -1,21 +1,27 @@
-# Imagem oficial do Playwright baseada em Ubuntu 22.04.
-FROM mcr.microsoft.com/playwright/python:v1.62.0-jammy
+# Utilizando versão exata de acordo com .python-version
+FROM python:3.12-slim
 
+# Instalando as dependências corretas para o sistema, tendo Chromium e ChromeDriver
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    chromium \
+    chromium-driver \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configurando o fuso horário para Manaus
+ENV TZ="America/Manaus"
+
+# Definindo o diretório de trabalho
 WORKDIR /app
 
+#  Copiando a dependência nesse ponto e rodando o pip install
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Configuração necessária para o Chromium executado pelo bot no container.
-ENV PYTHONUNBUFFERED=1 \
-    ENVIRONMENT=container \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
-    TZ=America/Manaus
-
-RUN playwright install chromium && playwright install-deps chromium
-RUN mkdir -p logs data/output reports screenshots
-
-# Copia o restante do código para o container.
+# Copiando o restante do código do projeto
 COPY . .
 
+# Comando padrão de execução do bot
 CMD ["python", "bot.py"]
