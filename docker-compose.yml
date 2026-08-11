@@ -1,8 +1,8 @@
 services:
-  #Serviço1: será responsável por hospedar o HTML
+  # Serviço responsável por hospedar o HTML de teste localmente
   frontend:
     image: nginx:alpine
-    container_name: portal_lotes
+    container_name: portal_lotes_selenium
     ports:
       - '8081:80'
     volumes:
@@ -12,24 +12,21 @@ services:
       interval: 5s
       retries: 5
 
-# Serviço 2: execução do bot no container.
+  # Serviço de execução do bot em container
   bot-conferencia:
     build: .
+    container_name: bot_selenium_run
     environment:
-      # URL interna: o bot acessa o Nginx pelo nome do serviço.
-      URL_BASE: http://frontend
-      HEADLESS: "true"
-      BOT_ID: bot-docker-001
-      EXECUCAO_ID: exec-compose-001
-      ENVIRONMENT: container
-      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
-      TZ: America/Manaus
+      # O bot acessa o Nginx pelo nome do serviço na rede do Docker
+      - URL_BASE=http://frontend
+      - HEADLESS=true
+      - ENVIRONMENT=container
+      - MAESTRO_ENABLED=false
     volumes:
-      # Evidências persistidas na máquina host.
+      # Evidências persistidas na máquina host
       - ./logs:/app/logs
-      - ./data/output:/app/data/output
-      - ./reports:/app/reports
       - ./screenshots:/app/screenshots
+      - ./data/output:/app/data/output
     depends_on:
       frontend:
         condition: service_healthy
