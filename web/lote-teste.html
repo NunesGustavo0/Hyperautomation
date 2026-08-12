@@ -283,7 +283,7 @@
 
         /* Classe que será adicionada via JavaScript */
         .success-box.show {
-            display: flex; 
+            display: flex;
         }
 
         @keyframes fadeIn {
@@ -362,7 +362,7 @@
 
             <!-- Adicionado o ID formCadastro -->
             <form id="formCadastro" action="#" method="POST">
-                
+
                 <div class="form-group">
                     <label for="lote">Número do Lote <span>*</span></label>
                     <input type="text" id="lote" class="form-control" placeholder="Ex.: LOTE-2025-0001" required>
@@ -421,10 +421,10 @@
         document.getElementById('formCadastro').addEventListener('submit', function(event) {
             // Previne o comportamento padrão de recarregar a página
             event.preventDefault();
-            
+
             // Adiciona a classe 'show' que muda o display de 'none' para 'flex'
             document.getElementById('mensagemSucesso').classList.add('show');
-            
+
             // Opcional: Você pode resetar o formulário aqui se quiser, usando:
             // this.reset();
         });

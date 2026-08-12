@@ -2,7 +2,7 @@ import logging
 import sys
 
 from src.config import ROOT_DIR
-from src.playwright.web_automation import executar_cadastro_web
+from selenium_web.web_automation import executar_cadastro_web
 import os
 from pythonjsonlogger import jsonlogger
 
