@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-from _pytest.config import Config
 from selenium.webdriver.chrome.webdriver import WebDriver
 
 from src.config import obter_configuracao
@@ -16,8 +15,8 @@ CONTA : dict = {
     "PASSWORD": "SenhaSuperSegura"
 }
 PRODUTOS : dict = {
-    'Nome_Produto' : "Produto A",
-    'Tipo_Produto' : "1",
+    'Nome_Produto' : "Produto Teste",
+    'Tipo_Produto' : "2",
     'Status_Produto' : 'processamento'
 }
 CAMINHO_EVIDENCIA: str = obter_configuracao().caminho_evidencia
@@ -64,4 +63,5 @@ def executar_cadastro_web(logger: logging.Logger):
     finally:
         logger.info("Encerrando o navegador")
         driver.close()
+        driver.quit()
 

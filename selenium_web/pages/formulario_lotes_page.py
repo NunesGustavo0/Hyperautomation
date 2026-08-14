@@ -14,7 +14,7 @@ SELETOR_LOTE : Final = 'lote'
 SELETOR_PRODUTO : Final = 'produto'
 BOTAO_CONFIRMAR : Final = 'button[type="submit"]'
 SELETOR_STATUS : Final = "input[name='status']"
-MENSAGEM_SUCESSO : Final = 'MensagemSucesso'
+MENSAGEM_SUCESSO : Final = 'mensagemSucesso'
 
 class SeleniumFormularioPage:
     def __init__(self,driver: WebDriver):
