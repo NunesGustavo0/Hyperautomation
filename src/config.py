@@ -8,9 +8,6 @@ from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
-# CAMINHOS PARA O PLAYWRIGHT
-
-
 def _as_bool(value: str | None, default: bool = False) -> bool:
     if value is None:
         return default
@@ -74,3 +71,32 @@ def validar_conexao(config: Configuracao) -> None:
     ]
     if campos_ausentes:
         raise RuntimeError(f"Configure no .env: {', '.join(campos_ausentes)}.")
+
+if __name__ == "__main__":
+    config = obter_configuracao()
+    print("Variaveis de Ambientes que foram carregados!!!")
+    texto: str = f"""# ==========================================
+# Configurações do Maestro (BotCity)
+# ==========================================
+MAESTRO_SERVER={config.maestro_server}
+MAESTRO_LOGIN={config.maestro_login}
+MAESTRO_KEY={config.maestro_key}
+MAESTRO_ENABLED={config.maestro_enabled}
+VAULT_ENABLED={config.vault_enabled}
+
+# ==========================================
+# Configurações de Dados e Credenciais (BotCity)
+# ==========================================
+AUDITORIA_DATAPOOL_LABEL={config.datapool_label}
+CREDENTIAL_LABEL={config.credential_label}
+CREDENTIAL_USER_KEY={config.credential_user_key}
+CREDENTIAL_PASSWORD_KEY={config.credential_password_key}
+
+# ==========================================
+# Configurações do Navegador e Sistema Web
+# ==========================================
+HEADLESS={config.interface_navegador}
+URL_BASE={config.url_base}
+CAMINHO_EVIDENCIA={config.caminho_evidencia}
+"""
+    print (texto)

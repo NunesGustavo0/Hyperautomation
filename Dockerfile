@@ -23,5 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiando o restante do código do projeto
 COPY . .
 
+RUN cp .env.example .env
+
 # Comando padrão de execução do bot
 CMD ["python", "bot.py"]
