@@ -80,6 +80,7 @@ def ler_e_validar(
     sleeper_base: Callable[[float], None] = sleep,
     repositorio_dead_letter: RepositorioDeadLetter | None = None,
     execution_id: str = "exec-processamento-local",
+    correlation_id: str = "",
     max_tentativas_dado: int = 3,
 ) -> list[RegistroValidado]:
     if classificador is None:
@@ -221,6 +222,7 @@ def ler_e_validar(
                         processar_registro,
                         repositorio=repositorio_dead_letter,
                         execution_id=execution_id,
+                        correlation_id=correlation_id,
                         max_tentativas_dado=max_tentativas_dado,
                     )
                 )
