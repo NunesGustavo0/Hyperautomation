@@ -2,22 +2,20 @@
 
 ## 1. Objetivo
 
-Este documento define a arquitetura-alvo do projeto Hyperautomation para o projeto final Capstone. O fluxo atual de três bots será evoluído para seis bots independentes, mantendo as regras determinísticas, o ML opcional, a rastreabilidade, a tolerância a falhas e os canais de alerta já implementados.
+Este documento registra a arquitetura final do projeto Hyperautomation para o Capstone. O pipeline E2E local executa seis etapas, mantendo as regras determinísticas, o ML opcional, a rastreabilidade, a tolerância a falhas e os canais de alerta. O empacotamento Maestro validado continua com três automações por compatibilidade.
 
-Esta etapa é exclusivamente arquitetural. As alterações no código serão realizadas nas issues seguintes.
-
-## 2. Situação atual e evolução planejada
+## 2. Situação implementada e evolução de plataforma
 
 | Componente atual | Papel atual | Destino no Capstone |
 |---|---|---|
-| Bot A — Entrada | Valida a entrada e inicia a cadeia | Será ampliado para Bot A — Entrada e Orquestração |
-| Bot B — Conferência | Lê, valida e classifica os registros | Sua lógica determinística será reaproveitada no Bot D — Consolidação e Regras |
-| Bot C — Relatório | Gera relatório e dispara alertas | Será ampliado para Bot F — Relatório e Alertas |
-| Cliente ML | Enriquece a decisão durante o fluxo | Será encapsulado no Bot E — Classificação ML |
+| Bot A — Entrada | Valida a entrada e inicia a cadeia | Bot A — Entrada e Orquestração no desenho de seis etapas |
+| Bot B — Conferência | Lê, valida e classifica os registros | D/E são executados separadamente no E2E local |
+| Bot C — Relatório | Gera relatório e dispara alertas | Corresponde ao Bot F no E2E local |
+| Cliente ML | Enriquece a decisão durante o fluxo | Bot E no E2E local |
 | Sistema de alertas | Telegram com fallback por email | Será utilizado pelo Bot F |
 | Dead letter | Armazena itens irrecuperáveis | Será compartilhada pelos bots que processam itens |
 
-O reaproveitamento reduz o risco de regressão. Os bots atuais continuam funcionando enquanto os novos componentes são desenvolvidos em branches isoladas.
+O reaproveitamento reduz o risco de regressão. Desktop, portal, API ML e as seis etapas são exercitados por `executar_pipeline_capstone.py`; a publicação real das seis automações no Smart Office não foi validada.
 
 ## 3. Arquitetura-alvo
 
@@ -359,4 +357,3 @@ Esses itens devem permanecer marcados como pendentes até existir evidência rea
 - [x] O ML está formalizado como enriquecimento não crítico.
 - [x] A estratégia não depende diretamente de um único orquestrador.
 - [x] As decisões bloqueadas pelo Smart Office estão identificadas.
-
