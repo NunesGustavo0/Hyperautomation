@@ -1,5 +1,6 @@
 # --- Framework de Automação Web e Nuvem ---
 botcity-maestro-sdk>=0.9.0
+botcity-framework-core
 playwright>=1.40.0
 
 # --- Manipulação de Dados e Planilhas ---
@@ -27,3 +28,8 @@ pytest-playwright==0.5.0
 
 httpx2
 matplotlib>=3.10
+
+#Interface gráfica
+customtkinter>=5.2,<6
+
+jinja2

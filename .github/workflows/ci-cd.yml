@@ -92,10 +92,16 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install -r requirements-dev.txt
 
+      - name: Instalar Chromium e dependências do Playwright
+        run: |
+          python -m playwright install --with-deps chromium
+
       - name: Preparar diretórios de evidências
-        run: mkdir -p logs reports/integration data/output
+        run: mkdir -p logs reports/integration data/output screenshots/bot_web
 
       - name: Executar testes de integração
+        env:
+          HEADLESS: "true"
         run: |
           set -o pipefail
           python -m pytest tests/integration \
@@ -114,6 +120,7 @@ jobs:
             logs/testes-integracao.log
             reports/integration/
             data/output/
+            screenshots/bot_web/
           if-no-files-found: warn
           retention-days: 14
   testes-e2e:
