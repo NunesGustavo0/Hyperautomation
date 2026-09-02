@@ -17,8 +17,7 @@ from src.classificador_divergencia import ClassificadorDivergencia
 from src.validacao_lotes import RegistroValidado
 
 from src.dead_letter import RepositorioDeadLetter
-
-
+from src.politicas_resiliencia import mensagem_erro_segura
 
 LOGGER = logging.getLogger("botcity_permorfer")
 BOT_ID = "bot-b-conferencia"
@@ -78,7 +77,7 @@ def executar_bot_conferencia(
     classificador: ClassificadorDivergencia | None = None,
     auditoria_ml: AuditoriaPipelineHibrido | None = None,
     logger: logging.Logger | None = None,
-    repositorio_dead_letter : RepositorioDeadLetter | None = None
+    repositorio_dead_letter: RepositorioDeadLetter | None = None,
 ) -> ResultadoBotConferencia:
     """Lê a planilha e processa todos os registros uma única vez."""
 
@@ -128,20 +127,24 @@ def executar_bot_conferencia(
             caminho,
             auditoria_ml=auditoria,
             classificador=classificador,
-            repositorio_dead_letter = repositorio_dead_letter,
-            execution_id=execution_id
+            repositorio_dead_letter=repositorio_dead_letter,
+            execution_id=execution_id,
+            correlation_id=correlation_id,
         )
     except Exception as erro:
+        erro_seguro = mensagem_erro_segura(erro)
         resultado = ResultadoBotConferencia(
             sucesso=False,
             status=StatusBotConferencia.ERRO_PROCESSAMENTO,
-            mensagem=f"Falha ao processar a planilha: {erro}",
+            mensagem=f"Falha ao processar a planilha: {erro_seguro}",
             execution_id=execution_id,
             correlation_id=correlation_id,
             caminho_entrada=str(caminho.resolve()),
-            erro=str(erro),
+            erro=erro_seguro,
         )
-        logger.exception(
+        # Não anexar ``exc_info``: o traceback pode carregar tokens presentes
+        # em argumentos de exceções de bibliotecas externas.
+        logger.error(
             "bot_conferencia_falhou",
             extra={
                 "evento": "bot_conferencia_falhou",
