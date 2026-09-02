@@ -246,6 +246,20 @@ Para encerrar:
 docker compose down
 ```
 
+## Demonstração E2E dos seis bots
+
+O Fedora é o ambiente de referência para a demonstração local. Após instalar
+as dependências do projeto, execute na raiz do repositório:
+
+```bash
+python executar_pipeline_capstone.py --alertas console
+```
+
+O comando inicia o simulador desktop em modo headless, o portal web e a API ML,
+executa os seis bots, grava os artefatos em `data/output/capstone_e2e` e encerra
+todos os processos auxiliares, inclusive quando ocorre uma falha. Nenhuma
+credencial real ou acesso ao Smart Office é utilizado.
+
 ## Demonstração local dos três bots
 
 Com alertas exibidos no terminal:
