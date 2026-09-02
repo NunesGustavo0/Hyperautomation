@@ -733,6 +733,14 @@ class AplicacaoEstoque:
 def construir_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--headless",
+        action="store_true",
+        help=(
+            "Mantém o simulador ativo sem janela para demonstrações E2E "
+            "em CI; utiliza a mesma massa determinística."
+        ),
+    )
+    parser.add_argument(
         "--modo",
         choices=MODOS_VALIDOS,
         default=os.getenv("DESKTOP_SIMULADOR_MODO", "normal"),
@@ -786,6 +794,14 @@ def main(argv: list[str] | None = None) -> int:
     if configuracao.modo == "lento":
         time.sleep(configuracao.atraso_segundos)
 
+    if args.headless:
+        print("Simulador desktop headless pronto.", flush=True)
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            return 0
+
     if tk is None or ttk is None:
         print(
             "Tkinter não está instalado. No Fedora, execute: "
@@ -832,4 +848,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
