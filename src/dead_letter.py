@@ -7,14 +7,23 @@ from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
+from time import sleep
 from typing import Any, Callable, Iterable, Mapping
 from uuid import uuid4
+
+from src.politicas_resiliencia import (
+    ErroDeInfraestrutura,
+    ErroDeItem,
+    mensagem_erro_segura,
+    obter_politica,
+    sanitizar_dados,
+)
 
 
 LOGGER = logging.getLogger("botcity_permorfer")
 
 
-class ErroDadoIrrecuperavel(ValueError):
+class ErroDadoIrrecuperavel(ErroDeItem, ValueError):
     """Falha determinística no conteúdo de um item.
 
     Somente esta categoria pode seguir para a dead letter. Erros genéricos,
@@ -31,6 +40,8 @@ class RegistroDeadLetter:
     tentativas: int
     horario: str
     item: dict[str, Any]
+    correlation_id: str = ""
+    item_id: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -101,6 +112,10 @@ class RepositorioDeadLetter:
                     tentativas=int(evento["tentativas"]),
                     horario=str(evento["horario"]),
                     item=dict(evento["item"]),
+                    correlation_id=str(evento.get("correlation_id", "")),
+                    item_id=str(
+                        evento.get("item_id", evento.get("lote", ""))
+                    ),
                 )
             elif (
                 evento.get("tipo_evento")
@@ -117,7 +132,12 @@ class RepositorioDeadLetter:
     def _adicionar_evento(self, evento: Mapping[str, Any]) -> None:
         self.caminho.parent.mkdir(parents=True, exist_ok=True)
         with self.caminho.open("a", encoding="utf-8") as arquivo:
-            json.dump(evento, arquivo, ensure_ascii=False, default=str)
+            json.dump(
+                sanitizar_dados(evento),
+                arquivo,
+                ensure_ascii=False,
+                default=str,
+            )
             arquivo.write("\n")
 
     def _ler_eventos(self) -> list[dict[str, Any]]:
@@ -145,13 +165,25 @@ def processar_lote_com_dead_letter(
     repositorio: RepositorioDeadLetter,
     execution_id: str,
     max_tentativas_dado: int = 3,
+    backoff_seconds: float | None = None,
+    max_tentativas_infraestrutura: int = 3,
+    correlation_id: str = "",
     clock: Callable[[], datetime] | None = None,
+    sleeper: Callable[[float], None] = sleep,
     logger: logging.Logger | None = None,
 ) -> ResultadoProcessamentoLote:
     """Processa todos os itens e isola somente erros repetidos de dados."""
 
     if max_tentativas_dado < 1:
         raise ValueError("max_tentativas_dado deve ser maior ou igual a 1")
+    if max_tentativas_infraestrutura < 1:
+        raise ValueError(
+            "max_tentativas_infraestrutura deve ser maior ou igual a 1"
+        )
+    if backoff_seconds is None:
+        backoff_seconds = obter_politica("item").backoff_seconds
+    if backoff_seconds < 0:
+        raise ValueError("backoff_seconds não pode ser negativo")
     if not execution_id.strip():
         raise ValueError("execution_id é obrigatório")
 
@@ -161,14 +193,28 @@ def processar_lote_com_dead_letter(
     dead_letters: list[RegistroDeadLetter] = []
     falhas_infraestrutura: list[FalhaInfraestrutura] = []
 
+    logger.info(
+        "lote_processamento_iniciado",
+        extra={
+            "evento": "lote_processamento_iniciado",
+            "execution_id": execution_id,
+            "correlation_id": correlation_id,
+            "modo_degradado": False,
+        },
+    )
+
     for item_original in itens:
         item = dict(item_original)
         lote = str(item.get("lote_id") or item.get("lote") or "")
-        for tentativa in range(1, max_tentativas_dado + 1):
+        limite_tentativas = max(
+            max_tentativas_dado,
+            max_tentativas_infraestrutura,
+        )
+        for tentativa in range(1, limite_tentativas + 1):
             try:
                 processados.append(processador(item))
                 break
-            except ErroDadoIrrecuperavel as erro:
+            except ErroDeItem as erro:
                 logger.warning(
                     "item_dado_tentativa_falhou",
                     extra={
@@ -177,18 +223,21 @@ def processar_lote_com_dead_letter(
                         "execution_id": execution_id,
                         "tentativa": tentativa,
                         "max_tentativas": max_tentativas_dado,
-                        "erro": str(erro),
+                        "erro": mensagem_erro_segura(erro),
                     },
                 )
                 if tentativa == max_tentativas_dado:
+                    item_seguro = sanitizar_dados(item)
                     registro = RegistroDeadLetter(
                         dead_letter_id=f"dlq-{uuid4()}",
                         lote=lote,
                         execution_id=execution_id,
-                        erro=str(erro),
+                        erro=str(sanitizar_dados(str(erro))),
                         tentativas=tentativa,
                         horario=_horario_iso(clock()),
-                        item=item,
+                        item=dict(item_seguro),
+                        correlation_id=correlation_id,
+                        item_id=lote,
                     )
                     repositorio.adicionar(registro)
                     dead_letters.append(registro)
@@ -196,16 +245,40 @@ def processar_lote_com_dead_letter(
                         "item_enviado_dead_letter",
                         extra={
                             "evento": "item_enviado_dead_letter",
-                            **registro.to_dict(),
+                            **sanitizar_dados(registro.to_dict()),
+                            "correlation_id": correlation_id,
                         },
                     )
+                    break
+                elif backoff_seconds:
+                    sleeper(backoff_seconds * (2 ** (tentativa - 1)))
+            except ErroDeInfraestrutura as erro:
+                erro_seguro = mensagem_erro_segura(erro)
+                if tentativa < max_tentativas_infraestrutura:
+                    if backoff_seconds:
+                        sleeper(backoff_seconds * (2 ** (tentativa - 1)))
+                    continue
+                falha = FalhaInfraestrutura(
+                    lote=lote,
+                    execution_id=execution_id,
+                    erro=erro_seguro,
+                )
+                falhas_infraestrutura.append(falha)
+                logger.error(
+                    "item_falha_infraestrutura",
+                    extra={
+                        "evento": "item_falha_infraestrutura",
+                        **asdict(falha),
+                    },
+                )
+                break
             except Exception as erro:
                 # Falha não tipada como dado é potencialmente temporária e
                 # nunca pode contaminar a fila de itens irrecuperáveis.
                 falha = FalhaInfraestrutura(
                     lote=lote,
                     execution_id=execution_id,
-                    erro=str(erro),
+                    erro=mensagem_erro_segura(erro),
                 )
                 falhas_infraestrutura.append(falha)
                 logger.error(
@@ -217,11 +290,24 @@ def processar_lote_com_dead_letter(
                 )
                 break
 
-    return ResultadoProcessamentoLote(
+    resultado = ResultadoProcessamentoLote(
         processados=tuple(processados),
         dead_letters=tuple(dead_letters),
         falhas_infraestrutura=tuple(falhas_infraestrutura),
     )
+    logger.info(
+        "lote_processamento_concluido",
+        extra={
+            "evento": "lote_processamento_concluido",
+            "execution_id": execution_id,
+            "correlation_id": correlation_id,
+            "itens_processados": len(processados),
+            "itens_dead_letter": len(dead_letters),
+            "falhas_infraestrutura": len(falhas_infraestrutura),
+            "modo_degradado": bool(dead_letters or falhas_infraestrutura),
+        },
+    )
+    return resultado
 
 
 def reprocessar_pendentes(
@@ -243,7 +329,7 @@ def reprocessar_pendentes(
                 registro,
                 execution_id_reprocessamento=execution_id,
                 sucesso=False,
-                erro=str(erro),
+                erro=mensagem_erro_segura(erro),
                 horario=clock(),
             )
         else:

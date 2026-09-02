@@ -4,7 +4,8 @@
 
 Pipeline híbrido para conferência de lotes, aplicação das regras RN01–RN12,
 classificação assistida por Machine Learning, geração de relatório executivo e
-orquestração de três bots pelo BotCity Maestro.
+execução local de seis etapas e orquestração legada de três bots pelo BotCity
+Maestro.
 
 O Fedora é o ambiente padrão de desenvolvimento e execução do Runner.
 
@@ -20,34 +21,25 @@ rastreabilidade do lote desde a entrada até o relatório final. O fluxo combina
 - tratamento de falhas de dados com retentativas e dead letter;
 - alertas pelo Telegram, com e-mail como canal secundário;
 - geração de relatório Excel e evidências de execução;
-- orquestração A → B → C pelo BotCity Maestro.
+- execução demonstrável A → B/C → D → E → F;
+- orquestração A → B → C já validada no BotCity Maestro.
 
 ## Arquitetura
 
-```text
-Planilha Excel
-     │
-     ▼
-Bot A — Entrada
-  valida arquivo e estrutura
-  publica a planilha como artefato
-     │
-     ▼
-Bot B — Conferência
-  baixa o artefato do Bot A
-  aplica RN01–RN12
-  consulta ML quando aplicável
-  usa fallback e dead letter
-  publica o resultado intermediário
-     │
-     ▼
-Bot C — Relatório
-  baixa o resultado do Bot B
-  consolida indicadores
-  gera Excel e resumo executivo
-  publica o relatório no Maestro
-  envia alertas
+```mermaid
+flowchart LR
+    A["A — Entrada"] --> B["B — Desktop"]
+    A --> C["C — Web"]
+    B --> D["D — Regras"]
+    C --> D
+    D --> E["E — ML opcional"]
+    E --> F["F — Relatório e alertas"]
 ```
+
+Os seis bots são etapas lógicas independentes no pipeline E2E local. O deploy
+Maestro disponível no repositório mantém três pacotes, agrupando D/E na
+conferência e F no relatório. A migração real para seis automações no Smart
+Office permanece pendente de acesso à plataforma.
 
 As tarefas sucessoras mantêm:
 
@@ -57,16 +49,19 @@ As tarefas sucessoras mantêm:
 - `execution_id`;
 - `correlation_id`.
 
-## Bots registrados no Maestro
+## Bots e responsabilidades
 
-| Etapa | Label da automação e Bot ID | Responsabilidade |
+| Etapa | Identificador | Responsabilidade |
 | --- | --- | --- |
-| Bot A | `carlos_souza-entrada-v1` | Receber e validar a planilha. |
-| Bot B | `carlos_souza-conferencia-v1` | Aplicar regras, ML, fallback e dead letter. |
-| Bot C | `carlos_souza-relatorio-v1` | Consolidar dados e gerar o relatório final. |
+| Bot A | `bot-a-entrada` | Criar IDs e validar a entrada. |
+| Bot B | `bot-b-coleta-desktop` | Coletar estoque no simulador visual. |
+| Bot C | `bot-c-coleta-web` | Coletar pedidos no portal local. |
+| Bot D | `bot-d-regras` | Consolidar fontes e aplicar regras determinísticas. |
+| Bot E | `bot-e-ml` | Enriquecer registros pela API ML ou fallback. |
+| Bot F | `bot-f-relatorio-alertas` | Gerar relatório e emitir alertas. |
 
-Os labels acima fazem parte do contrato da orquestração. Alterá-los no Maestro
-sem atualizar `src/orchestrator.py` impede a criação das tarefas sucessoras.
+Os labels Maestro v1 continuam definidos em `src/orchestrator.py`. Alterá-los
+na plataforma sem atualizar o código impede a criação das tarefas sucessoras.
 
 ## Tecnologias
 
@@ -100,6 +95,10 @@ sem atualizar `src/orchestrator.py` impede a criação das tarefas sucessoras.
 | `api_ml/main.py` | API FastAPI com `/health` e `/predict`. |
 | `gerar_relatorio.py` | Geração do Excel e do resumo executivo. |
 | `executar_pipeline_bots.py` | Demonstração local da cadeia A → B → C. |
+| `executar_pipeline_capstone.py` | Demonstração E2E local dos seis bots. |
+| `src/politicas_resiliencia.py` | Exceções, limites, backoff e sanitização comuns. |
+| `documentacao/PDD_CAPSTONE.md` | Processo implementado, regras e exceções. |
+| `documentacao/RUNBOOK_CAPSTONE.md` | Diagnóstico e recuperação operacional. |
 | `deploy/maestro/` | Entrypoints utilizados nos pacotes do Maestro. |
 | `scripts/build_bots_maestro.sh` | Geração dos três arquivos ZIP. |
 | `tests/` | Testes unitários, integração, crise e E2E. |
@@ -113,6 +112,16 @@ sem atualizar `src/orchestrator.py` impede a criação das tarefas sucessoras.
 - Docker com Docker Compose;
 - acesso ao BotCity Orquestrador para execução no Maestro;
 - BotCity Studio SDK e Runner configurados no Fedora.
+
+No Fedora, instale os pacotes de sistema antes do ambiente Python:
+
+```bash
+sudo dnf install -y git python3 python3-pip python3-tkinter docker docker-compose-plugin xorg-x11-server-Xvfb
+sudo systemctl enable --now docker
+```
+
+O usuário precisa de permissão para acessar o Docker. Após adicioná-lo ao grupo
+`docker`, encerre e abra uma nova sessão para que a alteração tenha efeito.
 
 ## Instalação local
 
@@ -150,6 +159,9 @@ Principais variáveis:
 | `ML_ENABLED` | Habilita as consultas ao serviço de ML. |
 | `ML_API_URL` | Endereço da API ML. |
 | `ML_MIN_CONFIDENCE` | Limiar mínimo para aceitar a predição. |
+| `ML_TIMEOUT_SECONDS` | Timeout da chamada à API ML. |
+| `BASE_REFERENCIA_MAX_TENTATIVAS` | Limite de consultas à base crítica. |
+| `BASE_REFERENCIA_BACKOFF_SECONDS` | Intervalo base entre consultas. |
 | `TELEGRAM_BOT_TOKEN` | Token do bot do Telegram. |
 | `TELEGRAM_CHAT_ID` | Destino das mensagens do Telegram. |
 | `EMAIL_ENABLED` | Habilita o canal secundário por e-mail. |
@@ -159,6 +171,10 @@ Principais variáveis:
 | `EMAIL_SMTP_PASSWORD` | Senha ou senha de aplicativo SMTP. |
 | `EMAIL_FROM` | Remetente do alerta. |
 | `EMAIL_TO` | Destinatário do alerta. |
+
+A relação completa, incluindo Maestro, simuladores e feature flags, está em
+`.env.example`. Valores vazios significam integração desabilitada ou ainda não
+configurada; nunca coloque credenciais reais no arquivo versionado.
 
 Exemplo para o Fedora:
 
@@ -246,6 +262,20 @@ Para encerrar:
 docker compose down
 ```
 
+## Demonstração E2E dos seis bots
+
+O Fedora é o ambiente de referência para a demonstração local. Após instalar
+as dependências do projeto, execute na raiz do repositório:
+
+```bash
+python executar_pipeline_capstone.py --alertas console
+```
+
+O comando inicia o simulador desktop em modo headless, o portal web e a API ML,
+executa os seis bots, grava os artefatos em `data/output/capstone_e2e` e encerra
+todos os processos auxiliares, inclusive quando ocorre uma falha. Nenhuma
+credencial real ou acesso ao Smart Office é utilizado.
+
 ## Demonstração local dos três bots
 
 Com alertas exibidos no terminal:
@@ -298,6 +328,22 @@ crítico. Falhas de comunicação não devem interromper o lote.
 Erros de dados são tentados novamente conforme a configuração. Quando todas as
 tentativas falham, o item é enviado para dead letter com sua causa e contexto.
 Os demais registros continuam sendo processados.
+
+O arquivo padrão é `data/output/dead_letter.jsonl`. Cada linha é um evento
+append-only com `dead_letter_id`, IDs de rastreabilidade, motivo, tentativas,
+horário e payload sanitizado. Consulte o procedimento de reprocessamento em
+`documentacao/RUNBOOK_CAPSTONE.md`.
+
+## Logs, relatórios e evidências
+
+- logs estruturados: `logs/` e `data/output/capstone_e2e/pipeline_capstone.jsonl`;
+- relatórios: `reports/` e `data/output/capstone_e2e/relatorio_final.xlsx`;
+- screenshots e HTML de falha: `screenshots/`;
+- dead letter: `data/output/dead_letter.jsonl`;
+- exemplo sanitizado: `documentacao/exemplos/relatorio_exemplo.md`.
+
+Use `execution_id` para identificar uma execução e `correlation_id` para unir
+logs, alertas, tarefas e artefatos da mesma cadeia.
 
 ## Deploy no BotCity Maestro
 
@@ -365,6 +411,7 @@ Por camada:
 python -m pytest tests/unit -q
 python -m pytest tests/integration -q
 python -m pytest tests/integration/test_simulacao_crise.py -q
+python -m pytest tests/integration/test_simulacao_crise_capstone.py -q
 python -m pytest tests/e2e -q
 ```
 
@@ -417,3 +464,7 @@ O job final falha quando qualquer camada obrigatória não termina com sucesso.
 O deploy real no BotCity Maestro foi validado com sucesso em 31 de agosto de
 2026. A cadeia A → B → C processou a planilha de inspeções e publicou o
 relatório Excel final como arquivo de resultado do Bot C.
+
+Essa validação não comprova o Smart Office nem o desmembramento em seis
+automações reais. Integração, filas, credenciais, coexistência e rollback no
+Smart Office continuam explicitamente adiados até existir acesso e evidência.

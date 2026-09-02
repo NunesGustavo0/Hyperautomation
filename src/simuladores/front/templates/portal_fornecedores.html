@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Hyperautomation - Portal de Fornecedores
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="../static/portal_fornecedores.css"
+    >
+</head>
+
+<body>
+    <div class="pagina">
+        <header class="cabecalho">
+            <div>
+                <p class="rotulo">
+                    Portal operacional
+                </p>
+
+                <h1 data-testid="titulo-portal">
+                    Pedidos de fornecedores
+                </h1>
+
+                <p class="subtitulo">
+                    Consulta de pedidos para o pipeline
+                    Hyperautomation
+                </p>
+            </div>
+
+            <div
+                class="estado-sistema"
+                data-testid="estado-sistema"
+            >
+                <span class="indicador-online"></span>
+                SISTEMA ONLINE
+            </div>
+        </header>
+
+        <main>
+            <section
+                class="indicadores"
+                aria-label="Indicadores de pedidos"
+            >
+                <article class="cartao">
+                    <span class="cartao-titulo">
+                        Total de pedidos
+                    </span>
+
+                    <strong
+                        class="cartao-valor azul"
+                        data-testid="total-pedidos"
+                    >
+                        {{ indicadores.total }}
+                    </strong>
+                </article>
+
+                <article class="cartao">
+                    <span class="cartao-titulo">
+                        Confirmados
+                    </span>
+
+                    <strong
+                        class="cartao-valor verde"
+                        data-testid="total-confirmados"
+                    >
+                        {{ indicadores.confirmados }}
+                    </strong>
+                </article>
+
+                <article class="cartao">
+                    <span class="cartao-titulo">
+                        Em trânsito
+                    </span>
+
+                    <strong
+                        class="cartao-valor ciano"
+                        data-testid="total-em-transito"
+                    >
+                        {{ indicadores.em_transito }}
+                    </strong>
+                </article>
+
+                <article class="cartao">
+                    <span class="cartao-titulo">
+                        Com atenção
+                    </span>
+
+                    <strong
+                        class="cartao-valor vermelho"
+                        data-testid="total-atencao"
+                    >
+                        {{ indicadores.com_atencao }}
+                    </strong>
+                </article>
+            </section>
+
+            <section
+                class="painel-filtros"
+                aria-label="Filtros"
+            >
+                <form
+                    method="get"
+                    action="/"
+                    class="formulario-filtros"
+                    data-testid="formulario-filtros"
+                >
+                    <div class="campo campo-busca">
+                        <label for="termo">
+                            Pesquisar pedido
+                        </label>
+
+                        <input
+                            id="termo"
+                            name="q"
+                            type="search"
+                            value="{{ termo }}"
+                            placeholder="Pedido, lote, fornecedor ou produto"
+                            data-testid="campo-busca"
+                        >
+                    </div>
+
+                    <div class="campo campo-status">
+                        <label for="status">
+                            Status
+                        </label>
+
+                        <select
+                            id="status"
+                            name="status"
+                            data-testid="filtro-status"
+                        >
+                            <option value="">
+                                Todos os status
+                            </option>
+
+                            {% for status in status_validos %}
+                                <option
+                                    value="{{ status }}"
+                                    {% if status == status_selecionado %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ status.replace("_", " ") }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <input
+                        type="hidden"
+                        name="pagina"
+                        value="1"
+                    >
+
+                    <div class="acoes-filtro">
+                        <button
+                            type="submit"
+                            class="botao botao-primario"
+                            data-testid="botao-buscar"
+                        >
+                            Buscar
+                        </button>
+
+                        <a
+                            href="/"
+                            class="botao botao-secundario"
+                            data-testid="botao-limpar"
+                        >
+                            Limpar
+                        </a>
+                    </div>
+                </form>
+            </section>
+
+            <section
+                class="painel-tabela"
+                aria-labelledby="titulo-tabela"
+            >
+                <div class="cabecalho-tabela">
+                    <div>
+                        <h2 id="titulo-tabela">
+                            Pedidos cadastrados
+                        </h2>
+
+                        <p>
+                            Dados fornecidos pelo portal externo
+                            simulado
+                        </p>
+                    </div>
+
+                    <span
+                        class="modo-execucao"
+                        data-testid="modo-execucao"
+                    >
+                        Modo: {{ modo }}
+                    </span>
+                </div>
+
+                <div class="tabela-responsiva">
+                    <table data-testid="tabela-pedidos">
+                        <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Lote</th>
+                                <th>Fornecedor</th>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Status</th>
+                                <th>Previsão</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for pedido in pagina.registros %}
+                                <tr
+                                    data-testid="pedido-row"
+                                    data-pedido-id="{{ pedido.pedido_id }}"
+                                    data-lote-id="{{ pedido.lote_id }}"
+                                >
+                                    <td
+                                        class="identificador"
+                                        data-testid="pedido-id"
+                                    >
+                                        {{ pedido.pedido_id }}
+                                    </td>
+
+                                    <td data-testid="lote-id">
+                                        {{ pedido.lote_id }}
+                                    </td>
+
+                                    <td data-testid="fornecedor">
+                                        {{ pedido.fornecedor }}
+                                    </td>
+
+                                    <td data-testid="produto">
+                                        {{ pedido.produto }}
+                                    </td>
+
+                                    <td
+                                        class="numero"
+                                        data-testid="quantidade-pedida"
+                                    >
+                                        {{ pedido.quantidade_pedida }}
+                                    </td>
+
+                                    <td>
+                                        <span
+                                            class="
+                                                status
+                                                status-{{
+                                                    pedido.status_pedido
+                                                    | lower
+                                                    | replace('_', '-')
+                                                }}
+                                            "
+                                            data-testid="status-pedido"
+                                        >
+                                            {{
+                                                pedido.status_pedido
+                                                .replace("_", " ")
+                                            }}
+                                        </span>
+                                    </td>
+
+                                    <td data-testid="previsao-entrega">
+                                        {% if pedido.previsao_entrega %}
+                                            {{
+                                                pedido.previsao_entrega
+                                                .strftime("%d/%m/%Y")
+                                            }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td
+                                        colspan="7"
+                                        class="estado-vazio"
+                                        data-testid="sem-registros"
+                                    >
+                                        <strong>
+                                            Nenhum pedido encontrado
+                                        </strong>
+
+                                        <span>
+                                            Ajuste os filtros ou tente
+                                            novamente.
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <footer class="rodape-tabela">
+                    <div>
+                        {% if pagina.pagina_atual > 1 %}
+                            <a
+                                href="{{ url_anterior }}"
+                                class="botao botao-paginacao"
+                                data-testid="pagina-anterior"
+                            >
+                                Anterior
+                            </a>
+                        {% else %}
+                            <span
+                                class="
+                                    botao
+                                    botao-paginacao
+                                    desabilitado
+                                "
+                                aria-disabled="true"
+                            >
+                                Anterior
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <p
+                        class="informacao-pagina"
+                        data-testid="informacao-pagina"
+                    >
+                        {{ pagina.total_registros }} registro(s)
+                        <span>•</span>
+                        Página {{ pagina.pagina_atual }}
+                        de {{ pagina.total_paginas }}
+                    </p>
+
+                    <div>
+                        {% if pagina.pagina_atual < pagina.total_paginas %}
+                            <a
+                                href="{{ url_proxima }}"
+                                class="
+                                    botao
+                                    botao-paginacao
+                                    proxima
+                                "
+                                data-testid="proxima-pagina"
+                            >
+                                Próxima
+                            </a>
+                        {% else %}
+                            <span
+                                class="
+                                    botao
+                                    botao-paginacao
+                                    desabilitado
+                                "
+                                aria-disabled="true"
+                                data-testid="fim-paginacao"
+                            >
+                                Fim
+                            </span>
+                        {% endif %}
+                    </div>
+                </footer>
+            </section>
+        </main>
+
+        <footer class="rodape-pagina">
+            <span>
+                Hyperautomation Capstone
+            </span>
+
+            <span>
+                Fonte web simulada para automação
+            </span>
+        </footer>
+    </div>
+</body>
+</html>
